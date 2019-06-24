@@ -38,7 +38,7 @@ from bpy_extras.io_utils import ExportHelper, ImportHelper
 preview_collections = {}
 
 
-class TaskTree(NodeTree):
+class NODE_OT_TaskTree(NodeTree):
     """ Task Nodes Tree Type """
     bl_idname = 'TaskTree'
     bl_label = 'Task Node Tree'
@@ -46,16 +46,16 @@ class TaskTree(NodeTree):
 
 
 # Custom socket type
-class TaskSocket(NodeSocket):
+class NODE_OT_TaskSocket(NodeSocket):
     """ Task node socket type """
     bl_idname = 'TaskSocket'
     bl_label = 'Task Socket'
 
-    DepProperty = bpy.props.StringProperty(
+    DepProperty : bpy.props.StringProperty(
         name="taskdep", description="dependency")
 
     def draw(self, context, layout, node, text):
-        layout.label(text)
+        layout.label(text = text)
 
     def draw_color(self, context, node):
         return (1.0, 0.4, 0.216, 0.5)
@@ -68,15 +68,14 @@ class DepNode:
 
 
 # Derived from the Node base type.
-class TaskNode(Node, DepNode):
+class NODE_OT_TaskNode(Node, DepNode):
     """ Single Dependency Node """
     bl_idname = 'TaskNode'
     bl_label = 'Task Node'
     bl_icon = 'SOUND'
 
     preview_image = None
-    preview_filepath = bpy.props.StringProperty(
-        default="", subtype="FILE_PATH")
+    preview_filepath : bpy.props.StringProperty(default="", subtype="FILE_PATH")
 
     def init(self, context):
         for i in range(10):
@@ -94,8 +93,9 @@ class TaskNode(Node, DepNode):
             row = layout.row()
             row.prop(self, prop, expand=True)
 
+
 for prop, proptype in taskdna.Props.get_bpy_types():
-    setattr(TaskNode, prop, proptype())
+    setattr(NODE_OT_TaskNode, prop, proptype())
 
 import nodeitems_utils
 from nodeitems_utils import NodeCategory, NodeItem
@@ -114,13 +114,13 @@ node_categories = [
     ]
 
 
-class CreateTask(bpy.types.Operator):
+class NODE_OT_CreateTask(bpy.types.Operator):
     """ Create a new Task """
     bl_label = "Create New Task"
     bl_idname = 'node.create_task'
 
     def execute(self, context):
-        group = context.area.spaces[0].node_tree
+        group = context.space_data.node_tree
         scene = context.scene
         deps = [dep for dep in group.task_deps if not dep == group.task_name]
         # create the nodes
@@ -153,32 +153,33 @@ class CreateTask(bpy.types.Operator):
         return {'FINISHED'}
 
 
-class TasksExport(bpy.types.Operator, ExportHelper):
+class NODE_OT_TasksExport(bpy.types.Operator, ExportHelper):
     """ Export Tasks """
     bl_label = "Tasks Export to JSON"
     bl_idname = 'node.tasks_export'
 
     filename_ext = ".json"
 
-    filter_glob = bpy.props.StringProperty(
+    filter_glob : bpy.props.StringProperty(
             default="*.json",
             options={'HIDDEN'},
             )
 
-    export_selected = bpy.props.BoolProperty(
+    export_selected : bpy.props.BoolProperty(
             default=False,
             name="Export Selected",
             description="Only Export Selected Tasks")
 
     @classmethod
     def poll(cls, context):
-        space = context.area.spaces[0]
-        return space and 'node_tree' in dir(space) and \
-            space.node_tree.bl_idname == 'TaskTree' and \
-            space.node_tree.nodes
+        space = context.space_data
+        if hasattr(space.node_tree, "bl_idname"):
+            return space and 'node_tree' in dir(space) and \
+                space.node_tree.bl_idname == 'TaskTree' and \
+                space.node_tree.nodes
 
     def execute(self, context):
-        group = context.area.spaces[0].node_tree
+        group = context.space_data.node_tree
         scene = context.scene
         jsonode.to_json(self.filepath, group, self.properties.export_selected)
         return {'FINISHED'}
@@ -200,39 +201,40 @@ for index, prop in enumerate(props):
             items=restrictions, default=restrictions[index][0]))
 
 
-class TasksExportCSV(bpy.types.Operator, ExportHelper, Restrict):
+class NODE_OT_TasksExportCSV(bpy.types.Operator, ExportHelper, Restrict):
     """ Export Tasks to CSV"""
     bl_label = "Tasks Export to CSV"
     bl_idname = 'node.tasks_export_csv'
 
     filename_ext = ".csv"
 
-    filter_glob = bpy.props.StringProperty(
+    filter_glob : bpy.props.StringProperty(
             default="*.csv",
             options={'HIDDEN'},
             )
 
-    export_selected = bpy.props.BoolProperty(
+    export_selected : bpy.props.BoolProperty(
             default=False,
             name="Export Selected",
             description="Only Export Selected Tasks")
 
-    export_blocked = bpy.props.BoolProperty(
+    export_blocked : bpy.props.BoolProperty(
             default=True,
             name="Export Blocked",
             description="Export Tasks that are blocked by other tasks")
 
-    seperator = bpy.props.StringProperty(default='~')
+    seperator : bpy.props.StringProperty(default='~')
 
     @classmethod
     def poll(cls, context):
-        space = context.area.spaces[0]
-        return space and 'node_tree' in dir(space) and \
-            space.node_tree.bl_idname == 'TaskTree' and \
-            space.node_tree.nodes
+        space = context.space_data
+        if hasattr(space.node_tree, "bl_idname"):
+            return space and 'node_tree' in dir(space) and \
+                space.node_tree.bl_idname == 'TaskTree' and \
+                space.node_tree.nodes
 
     def execute(self, context):
-        group = context.area.spaces[0].node_tree
+        group = context.space_data.node_tree
         scene = context.scene
         props = self.properties
         seperator = props.seperator
@@ -265,106 +267,111 @@ class TasksExportCSV(bpy.types.Operator, ExportHelper, Restrict):
         row.prop(props, 'seperator')
 
 
-class TasksImportCSV(bpy.types.Operator, ImportHelper):
+class NODE_OT_TasksImportCSV(bpy.types.Operator, ImportHelper):
     """ Import Tasks from CSV"""
     bl_label = "Tasks Import from CSV"
     bl_idname = 'node.tasks_import_csv'
 
     filename_ext = ".csv"
 
-    filter_glob = bpy.props.StringProperty(
+    filter_glob : bpy.props.StringProperty(
             default="*.csv",
             options={'HIDDEN'},
             )
 
-    seperator = bpy.props.StringProperty(default='~')
+    seperator : bpy.props.StringProperty(default='~')
 
     @classmethod
     def poll(cls, context):
-        space = context.area.spaces[0]
-        return space and 'node_tree' in dir(space) and \
-            space.node_tree.bl_idname == 'TaskTree'
+        space = context.space_data
+        if hasattr(space.node_tree, "bl_idname"):
+            return space and 'node_tree' in dir(space) and \
+                space.node_tree.bl_idname == 'TaskTree'
 
     def execute(self, context):
         props = self.properties
         if csvnode.import_csv(
                 props.filepath,
-                context.area.spaces[0].node_tree,
+                context.space_data.node_tree,
                 props.seperator):
             self.report({'ERROR'}, "CSV Invalid, check file or csv seperator")
             return {'CANCELLED'}
         return {'FINISHED'}
 
 
-class TasksImport(bpy.types.Operator, ImportHelper):
+class NODE_OT_TasksImport(bpy.types.Operator, ImportHelper):
     """ Import Tasks """
     bl_label = "Tasks Import"
     bl_idname = 'node.tasks_import'
 
     filename_ext = ".json"
 
-    filter_glob = bpy.props.StringProperty(
+    filter_glob : bpy.props.StringProperty(
             default="*.json",
             options={'HIDDEN'},
             )
 
     @classmethod
     def poll(cls, context):
-        space = context.area.spaces[0]
-        return space and 'node_tree' in dir(space) and \
-            space.node_tree.bl_idname == 'TaskTree' and \
-            not space.node_tree.nodes
+        space = context.space_data
+        if hasattr(space.node_tree, "bl_idname"):
+            return space and 'node_tree' in dir(space) and \
+                space.node_tree.bl_idname == 'TaskTree' and \
+                not space.node_tree.nodes
 
     def execute(self, context):
-        group = context.area.spaces[0].node_tree
+        group = context.space_data.node_tree
         scene = context.scene
         jsonode.to_nodetree(self.filepath, group)
         return {'FINISHED'}
 
 
-class TaskCreatePanel(bpy.types.Panel):
+class ORGNODES_PT_TaskCreatePanel(bpy.types.Panel):
     """ Task Creation Panel """
     bl_label = 'Create Task'
     bl_space_type = 'NODE_EDITOR'
-    bl_region_type = 'TOOLS'
+    bl_region_type = 'UI'
     bl_category = 'Dependency Nodes'
 
     def draw(self, context):
-        layout = self.layout
-        group = context.area.spaces[0].node_tree
-        layout.prop(group, 'task_name', text='identifier')
-        for prop in taskdna.Props.get_list():
-            layout.prop(group, 'task_{}'.format(prop), text=prop, expand=True)
-        layout.prop_menu_enum(group, 'task_deps', text='dependencies')
-        op = layout.operator('node.create_task', text='Create Task')
+        if bpy.context.area.ui_type == 'TaskTree':
+            layout = self.layout
+            group = context.space_data.node_tree     
+            if group:
+                layout.prop(group, 'task_name', text='identifier')
+                for prop in taskdna.Props.get_list():
+                    layout.prop(group, 'task_{}'.format(prop), text=prop, expand=True)
+                layout.prop_menu_enum(group, 'task_deps', text='dependencies')
+                op = layout.operator('node.create_task', text='Create Task')
 
 
-class TaskIOPanel(bpy.types.Panel):
+class ORGNODES_PT_TaskIOPanel(bpy.types.Panel):
     """ Task Import and Export Panel """
     bl_label = 'Import/Export'
     bl_space_type = 'NODE_EDITOR'
-    bl_region_type = 'TOOLS'
+    bl_region_type = 'UI'
     bl_category = 'Dependency Nodes'
 
     def draw(self, context):
-        layout = self.layout
-        group = context.area.spaces[0].node_tree
-        layout.operator_context = 'INVOKE_DEFAULT'
-        layout.operator('node.tasks_import', text='Import JSON')
-        layout.operator('node.tasks_export', text='Export JSON')
-        layout.operator('node.tasks_export_csv', text='Export csv')
-        layout.operator('node.tasks_import_csv', text='Import csv')
+        if bpy.context.area.ui_type == 'TaskTree':
+            layout = self.layout
+            group = context.space_data.node_tree
+            layout.operator_context = 'INVOKE_DEFAULT'
+            layout.operator('node.tasks_import', text='Import JSON')
+            layout.operator('node.tasks_export', text='Export JSON')
+            layout.operator('node.tasks_export_csv', text='Export csv')
+            layout.operator('node.tasks_import_csv', text='Import csv')
 
 
 class Proper():
     """ Proper """
 
 for prop, bpy_type in taskdna.Props.get_bpy_types():
-    print(prop, bpy_type)
+    
     setattr(
         Proper,
-        "search_{}".format(prop),
-        bpy.props.BoolProperty(default=False))
+        "search_{}".format(prop),        
+        bpy.props.BoolProperty(default=False))        
     setattr(
         Proper,
         "data_{}".format(prop),
@@ -376,22 +383,22 @@ class SearchOperator(bpy.types.Operator, Proper):
     bl_label = 'Select by Property'
     bl_idname = 'node.select_by_property'
 
-    exclusive = bpy.props.BoolProperty(default=True)
+    exclusive : bpy.props.BoolProperty(default=True)
 
     @classmethod
     def poll(cls, context):
-        space = context.area.spaces[0]
+        space = context.space_data
         return space and 'node_tree' in dir(space) and \
             space.node_tree.bl_idname == 'TaskTree' and \
             space.node_tree.nodes
 
     def invoke(self, context, event):
         wm = context.window_manager
-        wm.invoke_props_dialog(self, 250)
+        wm.invoke_props_dialog(self, width=250)
         return {'RUNNING_MODAL'}
 
     def execute(self, context):
-        group = context.area.spaces[0].node_tree
+        group = context.space_data.node_tree
         props = self.properties
         searches = (
             attr for attr in dir(props) if attr.startswith('search_') and
@@ -426,18 +433,20 @@ def nicetime(days):
     return "{} years, {} months".format(years, months)
 
 
-class SearchPanel(bpy.types.Panel):
+class ORGNODES_PT_SearchPanel(bpy.types.Panel):
     """ Search and Select Tools """
     bl_label = 'Search and Select'
     bl_space_type = 'NODE_EDITOR'
-    bl_region_type = 'TOOLS'
+    bl_region_type = 'UI'
     bl_category = 'Dependency Nodes'
 
     def draw(self, context):
-        layout = self.layout
-        nodes = context.area.spaces[0].node_tree.nodes
-        layout.operator_context = 'INVOKE_DEFAULT'
-        layout.operator('node.select_by_property', 'Select by Property')
+        if bpy.context.area.ui_type == 'TaskTree':
+            layout = self.layout
+            if hasattr(context.space_data.node_tree,"nodes"):
+                nodes = context.space_data.node_tree.nodes
+                layout.operator_context = 'INVOKE_DEFAULT'
+                layout.operator('node.select_by_property', text = 'Select by Property')
 
 
 def _report_format(prefix, nodes):
@@ -463,23 +472,24 @@ def _get_deps(old_deps):
         return []
 
 
-class StatsPanel(bpy.types.Panel):
+class ORGNODES_PT_StatsPanel(bpy.types.Panel):
     """ Statistics and reports"""
     bl_label = 'Stats and Reports'
     bl_space_type = 'NODE_EDITOR'
-    bl_region_type = 'TOOLS'
+    bl_region_type = 'UI'
     bl_category = 'Dependency Nodes'
 
     def draw(self, context):
-        layout = self.layout
-        nodes = context.area.spaces[0].node_tree.nodes
-        selected = [node for node in nodes if node.select]
-        layout.operator_context = 'INVOKE_DEFAULT'
-        layout.label(_report_format('project', nodes))
-        if selected:
-            selected.extend(_get_deps(selected))
-            layout.label(_report_format('selected', set(selected)))
-
+        if bpy.context.area.ui_type == 'TaskTree':
+            layout = self.layout
+            if hasattr(context.space_data.node_tree,"nodes"):
+                nodes = context.space_data.node_tree.nodes
+                selected = [node for node in nodes if node.select]
+                layout.operator_context = 'INVOKE_DEFAULT'
+                layout.label(text = _report_format('project',nodes))
+                if selected:
+                    selected.extend(_get_deps(selected))
+                    layout.label( text = _report_format( 'selected', set( selected )))
 
 def register():
     import os
@@ -502,40 +512,40 @@ def register():
             if preview[0].startswith(prefix.format(""))
             ]
 
-    TaskNode.preview_image = bpy.props.EnumProperty(items=get_preview)
+    NODE_OT_TaskNode.preview_image = bpy.props.EnumProperty(items=get_preview)
 
-    bpy.utils.register_class(TaskTree)
+    bpy.utils.register_class(NODE_OT_TaskTree)
 
     for prop, proptype in taskdna.Props.get_bpy_types():
-        setattr(TaskTree, 'task_{}'.format(prop), proptype())
-    TaskTree.task_name = bpy.props.StringProperty()
+        setattr(NODE_OT_TaskTree, 'task_{}'.format(prop), proptype())
+    NODE_OT_TaskTree.task_name = bpy.props.StringProperty()
 
     def get_nodes(self, context):
         too_many = len(self.nodes) >= 32
         return [
             tuple([node.name] * 3) for node in self.nodes
             if node.select or not too_many]
-    TaskTree.task_deps = bpy.props.EnumProperty(
+    NODE_OT_TaskTree.task_deps = bpy.props.EnumProperty(
         items=get_nodes, options={'ENUM_FLAG'})
-    for bpy_class in (TaskSocket, TaskNode):
+    for bpy_class in (NODE_OT_TaskSocket, NODE_OT_TaskNode):
         bpy.utils.register_class(bpy_class)
     nodeitems_utils.register_node_categories("CUSTOM_NODES", node_categories)
     for bpy_class in (
-            CreateTask, TasksImport, TasksExport, TasksExportCSV,
-            TasksImportCSV, TaskCreatePanel,
-            TaskIOPanel, SearchOperator, SearchPanel, StatsPanel):
+            NODE_OT_CreateTask, NODE_OT_TasksImport, NODE_OT_TasksExport, NODE_OT_TasksExportCSV,
+            NODE_OT_TasksImportCSV, ORGNODES_PT_TaskCreatePanel,
+            ORGNODES_PT_TaskIOPanel, SearchOperator, ORGNODES_PT_SearchPanel, ORGNODES_PT_StatsPanel):
         bpy.utils.register_class(bpy_class)
 
 
 def unregister():
     for bpy_class in (
-            StatsPanel, TaskCreatePanel, TaskIOPanel, CreateTask, TasksExport,
-            TasksImport, TasksExportCSV, TasksImportCSV,
-            SearchPanel, SearchOperator):
+            ORGNODES_PT_StatsPanel, ORGNODES_PT_TaskCreatePanel, ORGNODES_PT_TaskIOPanel, NODE_OT_CreateTask, NODE_OT_TasksExport,
+            NODE_OT_TasksImport, NODE_OT_TasksExportCSV, NODE_OT_TasksImportCSV,
+            ORGNODES_PT_SearchPanel, SearchOperator):
         bpy.utils.unregister_class(bpy_class)
     nodeitems_utils.unregister_node_categories("CUSTOM_NODES")
     for bpy_class in (
-            TaskTree, TaskSocket, TaskNode):
+            NODE_OT_TaskTree, NODE_OT_TaskSocket, NODE_OT_TaskNode):
         bpy.utils.unregister_class(bpy_class)
     for pcoll in preview_collections.values():
         bpy.utils.previews.remove(pcoll)

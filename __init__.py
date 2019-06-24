@@ -21,7 +21,7 @@
 
 bl_info = {
     "name": "OrgNodes",
-    "author": "Bassam Kurdali",
+    "author": "Bassam Kurdali,Port to 2.80 by Zebus3d & Sav Martin",
     "version": (0, 0),
     "blender": (2, 80, 0),
     "location": "Node Editor > Tools",

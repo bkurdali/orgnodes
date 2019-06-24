@@ -70,7 +70,7 @@ def _create_links(tasks, group):
     """ create dependency links aka noodles """
     for task in tasks:
         for i, dep in enumerate(tasks[task]['deps']):
-            nodelink = _create_link(group.links.new(
+            nodelink = _create_links(group.links.new(
                 group.nodes[task].inputs['depend_{}'.format(i)],
                 group.nodes[dep].outputs[0]))
 
@@ -168,4 +168,3 @@ if __name__ == "__main__":
     filename = '/home/bassam/projects/hamp/tube/scenes/edit/tasks.json'
     to_nodetree(filename, group)
     #to_json(filename, group)
-
